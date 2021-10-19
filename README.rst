@@ -2,7 +2,7 @@
 Tempest Integration for Glance
 ==============================
 
-This directory contains additional Ginder tempest tests.
+This directory contains additional Glance tempest tests.
 
 See the tempest plugin docs for information on using it:
 https://docs.openstack.org/tempest/latest/plugin.html#using-plugins
