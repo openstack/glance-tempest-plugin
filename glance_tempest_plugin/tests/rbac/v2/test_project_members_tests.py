@@ -26,7 +26,13 @@ class ImagesProjectMemberTests(rbac_base.ImageV2RbacImageTest,
                                rbac_base.ImageV2RbacTemplate):
 
     credentials = ['project_member', 'project_admin', 'system_admin',
-                   'project_alt_admin']
+                   'admin', 'project_alt_admin', 'project_alt_member']
+
+    @classmethod
+    def setup_clients(cls):
+        super().setup_clients()
+        cls.alt_project_images_client = (
+            cls.os_project_alt_member.image_client_v2)
 
     @decorators.idempotent_id('a71e7caf-2403-4fed-a4bf-9717949ecde2')
     def test_create_image(self):
@@ -71,13 +77,15 @@ class ImagesProjectMemberTests(rbac_base.ImageV2RbacImageTest,
             **self.image(visibility='private'))
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
         self.do_request('show_image', expected_status=exceptions.NotFound,
-                        image_id=image['id'])
+                        image_id=image['id'],
+                        client=self.alt_project_images_client)
 
         image = project_client.image_client_v2.create_image(
             **self.image(visibility='shared'))
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
         self.do_request('show_image', expected_status=exceptions.NotFound,
-                        image_id=image['id'])
+                        image_id=image['id'],
+                        client=self.alt_project_images_client)
 
         project_id = self.persona.credentials.project_id
         self.admin_client.image_member_client_v2.create_image_member(
@@ -114,7 +122,7 @@ class ImagesProjectMemberTests(rbac_base.ImageV2RbacImageTest,
                         private_image_in_project['id'])
 
         # Create a private image without an owner
-        private_image_no_owner = self.admin_images_client.create_image(
+        private_image_no_owner = self.os_admin.image_client_v2.create_image(
             **self.image(visibility='private'))
         self.addCleanup(self.admin_images_client.delete_image,
                         private_image_no_owner['id'])
@@ -194,7 +202,8 @@ class ImagesProjectMemberTests(rbac_base.ImageV2RbacImageTest,
         name = data_utils.rand_name('new-image-name')
         patch_body = [dict(replace='/name', value=name)]
         self.do_request('update_image', expected_status=exceptions.NotFound,
-                        image_id=image['id'], patch=patch_body)
+                        image_id=image['id'], patch=patch_body,
+                        client=self.alt_project_images_client)
 
         project_client = self.setup_user_client()
         image = project_client.image_client_v2.create_image(
@@ -226,7 +235,8 @@ class ImagesProjectMemberTests(rbac_base.ImageV2RbacImageTest,
         name = data_utils.rand_name('new-image-name')
         patch_body = [dict(replace='/name', value=name)]
         self.do_request('update_image', expected_status=exceptions.Forbidden,
-                        image_id=image['id'], patch=patch_body)
+                        image_id=image['id'], patch=patch_body,
+                        client=self.alt_project_images_client)
 
         image = self.admin_images_client.create_image(
             **self.image(visibility='public'))
@@ -234,7 +244,8 @@ class ImagesProjectMemberTests(rbac_base.ImageV2RbacImageTest,
         name = data_utils.rand_name('new-image-name')
         patch_body = [dict(replace='/name', value=name)]
         self.do_request('update_image', expected_status=exceptions.Forbidden,
-                        image_id=image['id'], patch=patch_body)
+                        image_id=image['id'], patch=patch_body,
+                        client=self.alt_project_images_client)
 
     @decorators.idempotent_id('bd5845dc-d96b-4d83-a8da-7978bd91ddc1')
     def test_upload_image(self):
@@ -266,7 +277,8 @@ class ImagesProjectMemberTests(rbac_base.ImageV2RbacImageTest,
                         image['id'])
         self.do_request('store_image_file',
                         expected_status=exceptions.NotFound,
-                        image_id=image['id'], data=image_data)
+                        image_id=image['id'], data=image_data,
+                        client=self.alt_project_images_client)
 
         project_client = self.setup_user_client()
         image = project_client.image_client_v2.create_image(
@@ -291,7 +303,8 @@ class ImagesProjectMemberTests(rbac_base.ImageV2RbacImageTest,
                         image['id'])
         self.do_request('store_image_file',
                         expected_status=exceptions.Forbidden,
-                        image_id=image['id'], data=image_data)
+                        image_id=image['id'], data=image_data,
+                        client=self.alt_project_images_client)
 
         image = self.admin_images_client.create_image(
             **self.image(visibility='public'))
@@ -299,7 +312,8 @@ class ImagesProjectMemberTests(rbac_base.ImageV2RbacImageTest,
                         image['id'])
         self.do_request('store_image_file',
                         expected_status=exceptions.Forbidden,
-                        image_id=image['id'], data=image_data)
+                        image_id=image['id'], data=image_data,
+                        client=self.alt_project_images_client)
 
     @decorators.idempotent_id('3dfa6f70-f6fe-4ed5-96eb-5f4634064aa3')
     def test_download_image(self):
@@ -326,20 +340,23 @@ class ImagesProjectMemberTests(rbac_base.ImageV2RbacImageTest,
         self.addCleanup(self.admin_images_client.delete_image,
                         image['id'])
         self.do_request('show_image_file', expected_status=exceptions.NotFound,
-                        image_id=image['id'])
+                        image_id=image['id'],
+                        client=self.alt_project_images_client)
 
         image = self.admin_images_client.create_image(
             **self.image(visibility='private'))
         self.addCleanup(self.admin_images_client.delete_image,
                         image['id'])
         self.do_request('show_image_file', expected_status=exceptions.NotFound,
-                        image_id=image['id'])
+                        image_id=image['id'],
+                        client=self.alt_project_images_client)
 
         image = project_client.image_client_v2.create_image(
             **self.image(visibility='shared'))
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
         self.do_request('show_image_file', expected_status=exceptions.NotFound,
-                        image_id=image['id'])
+                        image_id=image['id'],
+                        client=self.alt_project_images_client)
 
         image = self.admin_images_client.create_image(
             **self.image(visibility='community'))
@@ -359,7 +376,8 @@ class ImagesProjectMemberTests(rbac_base.ImageV2RbacImageTest,
         image = self.admin_images_client.create_image(
             **self.image(visibility='private'))
         self.do_request('delete_image', expected_status=exceptions.NotFound,
-                        image_id=image['id'])
+                        image_id=image['id'],
+                        client=self.alt_project_images_client)
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
 
         project_client = self.setup_user_client()
@@ -401,7 +419,8 @@ class ImagesProjectMemberTests(rbac_base.ImageV2RbacImageTest,
         image = self.admin_images_client.create_image(
             **self.image(visibility='public'))
         self.do_request('delete_image', expected_status=exceptions.Forbidden,
-                        image_id=image['id'])
+                        image_id=image['id'],
+                        client=self.alt_project_images_client)
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
 
     @decorators.idempotent_id('395579c9-92bb-40a9-a8b6-9daaa20ae610')
@@ -625,7 +644,8 @@ class ImagesProjectMemberTests(rbac_base.ImageV2RbacImageTest,
         # The user can't deactivate this image because they can't find it.
         self.do_request('deactivate_image',
                         expected_status=exceptions.NotFound,
-                        image_id=image['id'])
+                        image_id=image['id'],
+                        client=self.alt_project_images_client)
 
         # Project users can't deactivate community images, only administrators
         # should be able to do this.
@@ -635,7 +655,8 @@ class ImagesProjectMemberTests(rbac_base.ImageV2RbacImageTest,
         self.admin_images_client.store_image_file(image['id'], image_data)
         self.do_request('deactivate_image',
                         expected_status=exceptions.Forbidden,
-                        image_id=image['id'])
+                        image_id=image['id'],
+                        client=self.alt_project_images_client)
 
         # Project users can't deactivate public images, only administrators
         # should be able to do this.
@@ -645,7 +666,8 @@ class ImagesProjectMemberTests(rbac_base.ImageV2RbacImageTest,
         self.admin_images_client.store_image_file(image['id'], image_data)
         self.do_request('deactivate_image',
                         expected_status=exceptions.Forbidden,
-                        image_id=image['id'])
+                        image_id=image['id'],
+                        client=self.alt_project_images_client)
 
     @decorators.idempotent_id('58558447-8618-4dbe-97ce-bfc39b3743e7')
     def test_reactivate_image(self):
@@ -698,7 +720,8 @@ class ImagesProjectMemberTests(rbac_base.ImageV2RbacImageTest,
         # The user can't reactivate this image because they can't find it.
         self.do_request('reactivate_image',
                         expected_status=exceptions.NotFound,
-                        image_id=image['id'])
+                        image_id=image['id'],
+                        client=self.alt_project_images_client)
 
         image = project_client.image_client_v2.create_image(
             **self.image(visibility='shared'))
@@ -719,7 +742,8 @@ class ImagesProjectMemberTests(rbac_base.ImageV2RbacImageTest,
         self.admin_images_client.deactivate_image(image['id'])
         self.do_request('reactivate_image',
                         expected_status=exceptions.Forbidden,
-                        image_id=image['id'])
+                        image_id=image['id'],
+                        client=self.alt_project_images_client)
 
         # Only administrators can reactivate public images.
         image = self.admin_images_client.create_image(
@@ -729,7 +753,8 @@ class ImagesProjectMemberTests(rbac_base.ImageV2RbacImageTest,
         self.admin_images_client.deactivate_image(image['id'])
         self.do_request('reactivate_image',
                         expected_status=exceptions.Forbidden,
-                        image_id=image['id'])
+                        image_id=image['id'],
+                        client=self.alt_project_images_client)
 
 
 class NamespacesProjectMemberTests(rbac_base.MetadefV2RbacNamespaceTest,

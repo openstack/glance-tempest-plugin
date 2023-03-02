@@ -26,7 +26,14 @@ class ImagesProjectReaderTests(
         test_project_members_tests.ImagesProjectMemberTests):
 
     credentials = ['project_reader', 'project_admin', 'system_admin',
-                   'project_alt_admin']
+                   'admin', 'project_alt_admin', 'project_alt_member',
+                   'project_alt_reader']
+
+    @classmethod
+    def setup_clients(cls):
+        super().setup_clients()
+        cls.alt_project_images_client = (
+            cls.os_project_alt_reader.image_client_v2)
 
     @decorators.idempotent_id('5e151433-5901-45ec-9451-ed3170c299cb')
     def test_create_image(self):
@@ -80,7 +87,8 @@ class ImagesProjectReaderTests(
         # This fails because getting an image outside the user's project
         # returns a 404.
         self.do_request('update_image', expected_status=exceptions.NotFound,
-                        image_id=image['id'], patch=patch_body)
+                        image_id=image['id'], patch=patch_body,
+                        client=self.alt_project_images_client)
 
         project_client = self.setup_user_client()
         image = project_client.image_client_v2.create_image(
@@ -94,7 +102,8 @@ class ImagesProjectReaderTests(
         # returns a 403 because it checks tenancy later. IMO, this return code
         # shouldn't be any different from project users.
         self.do_request('update_image', expected_status=exceptions.NotFound,
-                        image_id=image['id'], patch=patch_body)
+                        image_id=image['id'], patch=patch_body,
+                        client=self.alt_project_images_client)
 
         image = project_client.image_client_v2.create_image(
             **self.image(visibility='shared'))
@@ -152,7 +161,8 @@ class ImagesProjectReaderTests(
                         image['id'])
         self.do_request('store_image_file',
                         expected_status=exceptions.NotFound,
-                        image_id=image['id'], data=image_data)
+                        image_id=image['id'], data=image_data,
+                        client=self.alt_project_images_client)
 
         project_client = self.setup_user_client()
         image = project_client.image_client_v2.create_image(
@@ -230,7 +240,8 @@ class ImagesProjectReaderTests(
                         image['id'])
         self.do_request('show_image_file',
                         expected_status=exceptions.NotFound,
-                        image_id=image['id'])
+                        image_id=image['id'],
+                        client=self.alt_project_images_client)
 
         # Fail to download an image for another project because we can't find
         # it.
