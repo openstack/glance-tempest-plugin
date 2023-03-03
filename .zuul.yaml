@@ -79,11 +79,9 @@
       - tempest-plugin-jobs
     check:
       jobs:
-        - glance-secure-rbac-protection-functional:
-            voting: false
+        - glance-secure-rbac-protection-functional
         - glance-legacy-rbac-protection-functional
     gate:
       jobs:
-        - glance-secure-rbac-protection-functional:
-            voting: false
+        - glance-secure-rbac-protection-functional
         - glance-legacy-rbac-protection-functional
