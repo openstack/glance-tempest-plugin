@@ -44,10 +44,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         image = self.do_request('create_image', expected_status=201,
                                 **self.image(visibility='public'))
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
-        # Check that system user is not permitted to create image.
-        self.do_request('create_image', expected_status=exceptions.Forbidden,
-                        client=self.os_system_admin.image_client_v2,
-                        **self.image(visibility='public'))
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to create image.
+            self.do_request('create_image',
+                            expected_status=exceptions.Forbidden,
+                            client=self.os_system_admin.image_client_v2,
+                            **self.image(visibility='public'))
 
     @decorators.idempotent_id('61fd8b5e-8a0b-46ca-91c4-6c2c2d35039d')
     def test_get_image(self):
@@ -69,10 +71,11 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
             **self.image(visibility='private'))
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
         self.do_request('show_image', image_id=image['id'])
-        # Check that system user is not permitted to get image.
-        self.do_request('show_image', expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'])
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to get image.
+            self.do_request('show_image', expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'])
 
         image = self.admin_images_client.create_image(
             **self.image(visibility='private'))
@@ -83,10 +86,11 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
             **self.image(visibility='shared'))
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
         self.do_request('show_image', image_id=image['id'])
-        # Check that system user is not permitted to get image.
-        self.do_request('show_image', expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'])
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to get image.
+            self.do_request('show_image', expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'])
         project_id = self.persona.credentials.project_id
         self.admin_client.image_member_client_v2.create_image_member(
             image['id'], member=project_id)
@@ -140,9 +144,11 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
                         public_image['id'])
 
         resp = self.do_request('list_images', expected_status=200)
-        # Check that system user is not permitted to list images.
-        self.do_request('list_images', expected_status=exceptions.Forbidden,
-                        client=self.os_system_admin.image_client_v2)
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to list images.
+            self.do_request('list_images',
+                            expected_status=exceptions.Forbidden,
+                            client=self.os_system_admin.image_client_v2)
         image_ids = set(image['id'] for image in resp['images'])
 
         self.assertIn(private_image_no_owner['id'], image_ids)
@@ -206,10 +212,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         patch_body = [dict(replace='/name', value=name)]
         self.do_request('update_image', expected_status=200,
                         image_id=image['id'], patch=patch_body)
-        # Check that system user is not permitted to update image.
-        self.do_request('update_image', expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'], patch=patch_body)
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to update image.
+            self.do_request('update_image',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'], patch=patch_body)
         project_client = self.setup_user_client()
         image = project_client.image_client_v2.create_image(
             **self.image(visibility='private'))
@@ -233,10 +241,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         patch_body = [dict(replace='/name', value=name)]
         self.do_request('update_image', expected_status=200,
                         image_id=image['id'], patch=patch_body)
-        # Check that system user is not permitted to update image.
-        self.do_request('update_image', expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'], patch=patch_body)
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to update image.
+            self.do_request('update_image',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'], patch=patch_body)
         image = self.admin_images_client.create_image(
             **self.image(visibility='community'))
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
@@ -244,10 +254,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         patch_body = [dict(replace='/name', value=name)]
         self.do_request('update_image', expected_status=200,
                         image_id=image['id'], patch=patch_body)
-        # Check that system user is not permitted to update image.
-        self.do_request('update_image', expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'], patch=patch_body)
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to update image.
+            self.do_request('update_image',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'], patch=patch_body)
         image = self.admin_images_client.create_image(
             **self.image(visibility='public'))
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
@@ -255,10 +267,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         patch_body = [dict(replace='/name', value=name)]
         self.do_request('update_image', expected_status=200,
                         image_id=image['id'], patch=patch_body)
-        # Check that system user is not permitted to update image.
-        self.do_request('update_image', expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'], patch=patch_body)
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to update image.
+            self.do_request('update_image',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'], patch=patch_body)
 
     @decorators.idempotent_id('947f1ae1-c5b6-4552-89e3-1078ca722be4')
     def test_upload_image(self):
@@ -290,11 +304,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
                         image['id'])
         self.do_request('store_image_file', image_id=image['id'],
                         expected_status=204, data=image_data)
-        # Check that system user is not permitted to store image file.
-        self.do_request('store_image_file',
-                        expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'], data=image_data)
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to store image file.
+            self.do_request('store_image_file',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'], data=image_data)
 
         project_client = self.setup_user_client()
         image = project_client.image_client_v2.create_image(
@@ -303,44 +318,48 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
                         image['id'])
         self.do_request('store_image_file', expected_status=204,
                         image_id=image['id'], data=image_data)
-        # Check that system user is not permitted to store image file.
-        self.do_request('store_image_file',
-                        expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'], data=image_data)
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to store image file.
+            self.do_request('store_image_file',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'], data=image_data)
         image = project_client.image_client_v2.create_image(
             **self.image(visibility='shared'))
         self.addCleanup(self.admin_images_client.delete_image,
                         image['id'])
         self.do_request('store_image_file', expected_status=204,
                         image_id=image['id'], data=image_data)
-        # Check that system user is not permitted to store image file.
-        self.do_request('store_image_file',
-                        expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'], data=image_data)
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to store image file.
+            self.do_request('store_image_file',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'], data=image_data)
         image = self.admin_images_client.create_image(
             **self.image(visibility='community'))
         self.addCleanup(self.admin_images_client.delete_image,
                         image['id'])
         self.do_request('store_image_file', expected_status=204,
                         image_id=image['id'], data=image_data)
-        # Check that system user is not permitted to store image file.
-        self.do_request('store_image_file',
-                        expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'], data=image_data)
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to store image file.
+            self.do_request('store_image_file',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'], data=image_data)
         image = self.admin_images_client.create_image(
             **self.image(visibility='public'))
         self.addCleanup(self.admin_images_client.delete_image,
                         image['id'])
         self.do_request('store_image_file', expected_status=204,
                         image_id=image['id'], data=image_data)
-        # Check that system user is not permitted to store image file.
-        self.do_request('store_image_file',
-                        expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'], data=image_data)
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to store image file.
+            self.do_request('store_image_file',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'], data=image_data)
 
     @decorators.idempotent_id('24891c04-28ca-41f9-92d1-c06d8ba4b83d')
     def test_download_image(self):
@@ -369,11 +388,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
                         image['id'])
         self.do_request('show_image_file', expected_status=204,
                         image_id=image['id'])
-        # Check that system user is not permitted to show image file.
-        self.do_request('show_image_file',
-                        expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'])
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to show image file.
+            self.do_request('show_image_file',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'])
 
         image = self.admin_images_client.create_image(
             **self.image(visibility='private'))
@@ -387,11 +407,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
         self.do_request('show_image_file', expected_status=204,
                         image_id=image['id'])
-        # Check that system user is not permitted to show image file.
-        self.do_request('show_image_file',
-                        expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'])
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to show image file.
+            self.do_request('show_image_file',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'])
 
         image = self.admin_images_client.create_image(
             **self.image(visibility='community'))
@@ -412,20 +433,24 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
             **self.image(visibility='private'))
         self.do_request('delete_image', expected_status=204,
                         image_id=image['id'])
-        # Check that system user is not permitted to delete image.
-        self.do_request('delete_image', expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'])
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to delete image.
+            self.do_request('delete_image',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'])
 
         project_client = self.setup_user_client()
         image = project_client.image_client_v2.create_image(
             **self.image(visibility='private'))
         self.do_request('delete_image', expected_status=204,
                         image_id=image['id'])
-        # Check that system user is not permitted to delete image.
-        self.do_request('delete_image', expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'])
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to delete image.
+            self.do_request('delete_image',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'])
 
         image = self.client.create_image(
             **self.image(visibility='private'))
@@ -437,10 +462,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
             **self.image(visibility='shared'))
         self.do_request('delete_image', expected_status=204,
                         image_id=image['id'])
-        # Check that system user is not permitted to delete image.
-        self.do_request('delete_image', expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'])
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to delete image.
+            self.do_request('delete_image',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'])
 
         image = self.client.create_image(
             **self.image(visibility='shared'))
@@ -451,10 +478,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
             **self.image(visibility='community'))
         self.do_request('delete_image', expected_status=204,
                         image_id=image['id'])
-        # Check that system user is not permitted to delete image.
-        self.do_request('delete_image', expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'])
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to delete image.
+            self.do_request('delete_image',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'])
 
         image = self.client.create_image(
             **self.image(visibility='community'))
@@ -465,10 +494,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
             **self.image(visibility='public'))
         self.do_request('delete_image', expected_status=204,
                         image_id=image['id'])
-        # Check that system user is not permitted to delete image.
-        self.do_request('delete_image', expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'])
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to delete image.
+            self.do_request('delete_image',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'])
 
     @decorators.idempotent_id('ec3da4dc-f478-4a70-8799-db0814e340f4')
     def test_add_image_member(self):
@@ -520,11 +551,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
                         client=self.persona.image_member_client_v2,
                         expected_status=200, image_id=image['id'],
                         member_id=project_one_id)
-        # Check that system user is not permitted to show image member.
-        self.do_request('show_image_member',
-                        expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_member_client_v2,
-                        image_id=image['id'], member_id=project_one_id)
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to show image member.
+            self.do_request('show_image_member',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_member_client_v2,
+                            image_id=image['id'], member_id=project_one_id)
 
     @decorators.idempotent_id('daaef0c5-1172-457b-b1a3-0736b64c8426')
     def test_list_image_members(self):
@@ -549,11 +581,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         members = set(m['member_id'] for m in resp['members'])
         self.assertIn(project_id, members)
         self.assertIn(other_member_project_id, members)
-        # Check that system user is not permitted to list image members.
-        self.do_request('list_image_members',
-                        expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_member_client_v2,
-                        image_id=image['id'])
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to list image members.
+            self.do_request('list_image_members',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_member_client_v2,
+                            image_id=image['id'])
 
     @decorators.idempotent_id('2baaaca0-6335-4219-9bd9-207a5cfda6a2')
     def test_update_image_member(self):
@@ -601,12 +634,13 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
                         client=self.persona.image_member_client_v2,
                         expected_status=200, image_id=image['id'],
                         member_id=member_project_id, status='rejected')
-        # Check that system user is not permitted to update image member.
-        self.do_request('update_image_member',
-                        expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_member_client_v2,
-                        image_id=image['id'], member_id=member_project_id,
-                        status='rejected')
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to update image member.
+            self.do_request('update_image_member',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_member_client_v2,
+                            image_id=image['id'], member_id=member_project_id,
+                            status='rejected')
 
     @decorators.idempotent_id('7f0a8e2b-b655-416a-914b-9615cff18bbf')
     def test_delete_image_member(self):
@@ -646,11 +680,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
                         client=self.persona.image_member_client_v2,
                         expected_status=204, image_id=image['id'],
                         member_id=member_project_id)
-        # Check that system user is not permitted to delete image member.
-        self.do_request('delete_image_member',
-                        expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_member_client_v2,
-                        image_id=image['id'], member_id=member_project_id)
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to delete image member.
+            self.do_request('delete_image_member',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_member_client_v2,
+                            image_id=image['id'], member_id=member_project_id)
 
     @decorators.idempotent_id('dfc73f6f-bf91-4b6a-8482-acc8c436e066')
     def test_deactivate_image(self):
@@ -683,11 +718,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
                                                         image_data)
         self.do_request('deactivate_image', expected_status=204,
                         image_id=image['id'])
-        # Check that system user is not permitted to deactivate image.
-        self.do_request('deactivate_image',
-                        expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'])
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to deactivate image.
+            self.do_request('deactivate_image',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'])
 
         image = project_client.image_client_v2.create_image(
             **self.image(visibility='shared'))
@@ -696,11 +732,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
                                                         image_data)
         self.do_request('deactivate_image', expected_status=204,
                         image_id=image['id'])
-        # Check that system user is not permitted to deactivate image.
-        self.do_request('deactivate_image',
-                        expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'])
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to deactivate image.
+            self.do_request('deactivate_image',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'])
 
         image = self.admin_images_client.create_image(
             **self.image(visibility='community'))
@@ -708,11 +745,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         self.admin_images_client.store_image_file(image['id'], image_data)
         self.do_request('deactivate_image', expected_status=204,
                         image_id=image['id'])
-        # Check that system user is not permitted to deactivate image.
-        self.do_request('deactivate_image',
-                        expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'])
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to deactivate image.
+            self.do_request('deactivate_image',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'])
 
         image = self.admin_images_client.create_image(
             **self.image(visibility='public'))
@@ -720,11 +758,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         self.admin_images_client.store_image_file(image['id'], image_data)
         self.do_request('deactivate_image', expected_status=204,
                         image_id=image['id'])
-        # Check that system user is not permitted to deactivate image.
-        self.do_request('deactivate_image',
-                        expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'])
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to deactivate image.
+            self.do_request('deactivate_image',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'])
 
     @decorators.idempotent_id('3cbef53c-ab8a-4343-b993-8f9e14ab90d1')
     def test_reactivate_image(self):
@@ -760,11 +799,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         project_client.image_client_v2.deactivate_image(image['id'])
         self.do_request('reactivate_image', expected_status=204,
                         image_id=image['id'])
-        # Check that system user is not permitted to reactivate image.
-        self.do_request('reactivate_image',
-                        expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'])
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to reactivate image.
+            self.do_request('reactivate_image',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'])
 
         image = project_client.image_client_v2.create_image(
             **self.image(visibility='shared'))
@@ -774,11 +814,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         project_client.image_client_v2.deactivate_image(image['id'])
         self.do_request('reactivate_image', expected_status=204,
                         image_id=image['id'])
-        # Check that system user is not permitted to reactivate image.
-        self.do_request('reactivate_image',
-                        expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'])
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to reactivate image.
+            self.do_request('reactivate_image',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'])
 
         image = self.admin_images_client.create_image(
             **self.image(visibility='community'))
@@ -787,11 +828,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         self.admin_images_client.deactivate_image(image['id'])
         self.do_request('reactivate_image', expected_status=204,
                         image_id=image['id'])
-        # Check that system user is not permitted to reactivate image.
-        self.do_request('reactivate_image',
-                        expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'])
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to reactivate image.
+            self.do_request('reactivate_image',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'])
 
         image = self.admin_images_client.create_image(
             **self.image(visibility='public'))
@@ -800,11 +842,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         self.admin_images_client.deactivate_image(image['id'])
         self.do_request('reactivate_image', expected_status=204,
                         image_id=image['id'])
-        # Check that system user is not permitted to reactivate image.
-        self.do_request('reactivate_image',
-                        expected_status=exceptions.NotFound,
-                        client=self.os_system_admin.image_client_v2,
-                        image_id=image['id'])
+        if not CONF.glance_api.system_scope_supported:
+            # Check that system user is not permitted to reactivate image.
+            self.do_request('reactivate_image',
+                            expected_status=exceptions.NotFound,
+                            client=self.os_system_admin.image_client_v2,
+                            image_id=image['id'])
 
 
 class NamespacesProjectAdminTests(rbac_base.MetadefV2RbacNamespaceTest,

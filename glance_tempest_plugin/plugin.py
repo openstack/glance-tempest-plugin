@@ -16,7 +16,10 @@
 
 import os
 
+from tempest import config
 from tempest.test_discover import plugins
+
+from glance_tempest_plugin import config as glance_config
 
 
 class GlanceTempestPlugin(plugins.TempestPlugin):
@@ -28,7 +31,12 @@ class GlanceTempestPlugin(plugins.TempestPlugin):
         return full_test_dir, base_path
 
     def register_opts(self, conf):
-        pass
+        config.register_opt_group(conf,
+                                  glance_config.glance_api_group,
+                                  glance_config.GlanceAPIGroup)
 
     def get_opt_lists(self):
-        pass
+        return [
+            (glance_config.glance_api_group.name,
+             glance_config.GlanceAPIGroup),
+        ]
