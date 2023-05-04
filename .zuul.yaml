@@ -2,7 +2,7 @@
     name: glance-secure-rbac-protection-functional
     parent: devstack-tempest
     timeout: 4200
-    branches: ^(?!stable/(xena|yoga|wallaby)).*$
+    branches: ^(?!stable/wallaby).*$
     required-projects:
       - openstack/devstack-gate
       - openstack/glance
@@ -21,18 +21,6 @@
           $GLANCE_API_CONF:
             DEFAULT:
               default_log_levels: "amqp=WARN, amqplib=WARN, boto=WARN, qpid=WARN, sqlalchemy=WARN, suds=INFO, oslo.messaging=INFO, oslo_messaging=INFO, iso8601=WARN, requests.packages.urllib3.connectionpool=WARN, urllib3.connectionpool=WARN, websocket=WARN, requests.packages.urllib3.util.retry=WARN, urllib3.util.retry=WARN, keystonemiddleware=WARN, routes.middleware=WARN, stevedore=WARN, taskflow=WARN, keystoneauth=WARN, oslo.cache=INFO, dogpile.core.dogpile=INFO, oslo_policy=DEBUG"
-
-- job:
-    name: glance-secure-rbac-protection-functional
-    parent: devstack-tempest
-    timeout: 4200
-    branches: ^(stable/(xena|yoga)).*$
-    required-projects:
-      - openstack/devstack-gate
-      - openstack/glance
-      - name: openstack/glance-tempest-plugin
-        override-checkout: 0.3.0
-    vars: *rbac-protection-functional-vars
 
 - job:
     name: glance-secure-rbac-protection-functional
@@ -73,6 +61,30 @@
             DEFAULT:
               default_log_levels: "amqp=WARN, amqplib=WARN, boto=WARN, qpid=WARN, sqlalchemy=WARN, suds=INFO, oslo.messaging=INFO, oslo_messaging=INFO, iso8601=WARN, requests.packages.urllib3.connectionpool=WARN, urllib3.connectionpool=WARN, websocket=WARN, requests.packages.urllib3.util.retry=WARN, urllib3.util.retry=WARN, keystonemiddleware=WARN, routes.middleware=WARN, stevedore=WARN, taskflow=WARN, keystoneauth=WARN, oslo.cache=INFO, dogpile.core.dogpile=INFO, oslo_policy=DEBUG"
 
+- job:
+    name: glance-secure-rbac-protection-functional-2023-1
+    parent: glance-secure-rbac-protection-functional
+    nodeset: openstack-single-node-jammy
+    override-checkout: stable/2023.1
+
+- job:
+    name: glance-secure-rbac-protection-functional-zed
+    parent: glance-secure-rbac-protection-functional
+    nodeset: openstack-single-node-focal
+    override-checkout: stable/zed
+
+- job:
+    name: glance-secure-rbac-protection-functional-yoga
+    parent: glance-secure-rbac-protection-functional
+    nodeset: openstack-single-node-focal
+    override-checkout: stable/yoga
+
+- job:
+    name: glance-secure-rbac-protection-functional-xena
+    parent: glance-secure-rbac-protection-functional
+    nodeset: openstack-single-node-focal
+    override-checkout: stable/xena
+
 - project:
     templates:
       - check-requirements
@@ -81,6 +93,13 @@
       jobs:
         - glance-secure-rbac-protection-functional
         - glance-legacy-rbac-protection-functional
+        # NOTE(gmann): We are testing stable jobs in check pipeline only as
+        # that should be enough if any tests is changed in backward
+        # incompatible way.
+        - glance-secure-rbac-protection-functional-2023-1
+        - glance-secure-rbac-protection-functional-zed
+        - glance-secure-rbac-protection-functional-yoga
+        - glance-secure-rbac-protection-functional-xena
     gate:
       jobs:
         - glance-secure-rbac-protection-functional
