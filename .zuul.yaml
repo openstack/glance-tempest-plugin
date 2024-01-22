@@ -2,7 +2,9 @@
     name: glance-secure-rbac-protection-functional
     parent: devstack-tempest
     timeout: 4200
-    branches: ^(?!stable/wallaby).*$
+    branches:
+      regex: ^stable/wallaby$
+      negate: true
     required-projects:
       - openstack/devstack-gate
       - openstack/glance
