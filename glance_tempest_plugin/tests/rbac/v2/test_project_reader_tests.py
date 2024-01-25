@@ -10,7 +10,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import six
+import io
 
 from tempest import config
 from tempest.lib.common.utils import data_utils
@@ -134,7 +134,7 @@ class ImagesProjectReaderTests(
     @decorators.idempotent_id('b7ac2883-f569-4032-a35b-a79ef1277582')
     def test_upload_image(self):
         file_contents = data_utils.random_bytes()
-        image_data = six.BytesIO(file_contents)
+        image_data = io.BytesIO(file_contents)
 
         project_id = self.persona.credentials.project_id
         project_client = self.setup_user_client(project_id=project_id)
@@ -445,7 +445,7 @@ class ImagesProjectReaderTests(
         project_id = self.persona.credentials.project_id
         project_client = self.setup_user_client(project_id=project_id)
         file_contents = data_utils.random_bytes()
-        image_data = six.BytesIO(file_contents)
+        image_data = io.BytesIO(file_contents)
 
         # Create a new private image in the persona user's project.
         image = project_client.image_client_v2.create_image(
@@ -522,7 +522,7 @@ class ImagesProjectReaderTests(
         project_id = self.persona.credentials.project_id
         project_client = self.setup_user_client(project_id=project_id)
         file_contents = data_utils.random_bytes()
-        image_data = six.BytesIO(file_contents)
+        image_data = io.BytesIO(file_contents)
 
         # Create a private image in the persona user's project.
         image = project_client.image_client_v2.create_image(

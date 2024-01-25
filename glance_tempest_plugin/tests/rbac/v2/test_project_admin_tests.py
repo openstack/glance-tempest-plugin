@@ -10,7 +10,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import six
+import io
 
 from tempest import config
 from tempest.lib.common.utils import data_utils
@@ -277,7 +277,7 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
     @decorators.idempotent_id('947f1ae1-c5b6-4552-89e3-1078ca722be4')
     def test_upload_image(self):
         file_contents = data_utils.random_bytes()
-        image_data = six.BytesIO(file_contents)
+        image_data = io.BytesIO(file_contents)
 
         project_id = self.persona.credentials.project_id
         project_client = self.setup_user_client(project_id=project_id)
@@ -692,7 +692,7 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         project_id = self.persona.credentials.project_id
         project_client = self.setup_user_client(project_id=project_id)
         file_contents = data_utils.random_bytes()
-        image_data = six.BytesIO(file_contents)
+        image_data = io.BytesIO(file_contents)
 
         image = project_client.image_client_v2.create_image(
             **self.image(visibility='private'))
@@ -770,7 +770,7 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         project_id = self.persona.credentials.project_id
         project_client = self.setup_user_client(project_id=project_id)
         file_contents = data_utils.random_bytes()
-        image_data = six.BytesIO(file_contents)
+        image_data = io.BytesIO(file_contents)
 
         image = project_client.image_client_v2.create_image(
             **self.image(visibility='private'))
