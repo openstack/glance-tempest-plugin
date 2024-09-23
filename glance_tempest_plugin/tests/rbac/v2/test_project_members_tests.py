@@ -10,7 +10,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import six
+import io
 
 from tempest import config
 from tempest.lib.common.utils import data_utils
@@ -250,7 +250,7 @@ class ImagesProjectMemberTests(rbac_base.ImageV2RbacImageTest,
     @decorators.idempotent_id('bd5845dc-d96b-4d83-a8da-7978bd91ddc1')
     def test_upload_image(self):
         file_contents = data_utils.random_bytes()
-        image_data = six.BytesIO(file_contents)
+        image_data = io.BytesIO(file_contents)
 
         project_id = self.persona.credentials.project_id
         project_client = self.setup_user_client(project_id=project_id)
@@ -595,7 +595,7 @@ class ImagesProjectMemberTests(rbac_base.ImageV2RbacImageTest,
         project_id = self.persona.credentials.project_id
         project_client = self.setup_user_client(project_id=project_id)
         file_contents = data_utils.random_bytes()
-        image_data = six.BytesIO(file_contents)
+        image_data = io.BytesIO(file_contents)
 
         # Create a private image in the persona user's project and make sure
         # the persona user can deactivate it.
@@ -675,7 +675,7 @@ class ImagesProjectMemberTests(rbac_base.ImageV2RbacImageTest,
         project_id = self.persona.credentials.project_id
         project_client = self.setup_user_client(project_id=project_id)
         file_contents = data_utils.random_bytes()
-        image_data = six.BytesIO(file_contents)
+        image_data = io.BytesIO(file_contents)
 
         # Create a private image within the persona user's project and make
         # sure we can reactivate it.
