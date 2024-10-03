@@ -146,8 +146,15 @@ class ImageV2RbacImageTest(RbacBaseTests):
     def image(self, visibility=None):
         image = {}
         image['name'] = data_utils.rand_name('image')
-        image['container_format'] = CONF.image.container_formats[0]
-        image['disk_format'] = CONF.image.disk_formats[0]
+        # NOTE(danms): It's technically possible that bare/raw is not allowed,
+        # but this test suite cannot operate in that scenario since it does
+        # not have valid image data to upload.
+        if 'bare' not in CONF.image.container_formats:
+            self.skipTest('This test requires the "bare" container format')
+        if 'raw' not in CONF.image.disk_formats:
+            self.skipTest('This test requires the "raw" container format')
+        image['container_format'] = 'bare'
+        image['disk_format'] = 'raw'
         image['visibility'] = visibility if visibility else 'private'
         image['ramdisk_uuid'] = '00000000-1111-2222-3333-444455556666'
         return image
