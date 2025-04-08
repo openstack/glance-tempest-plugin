@@ -2,9 +2,6 @@
     name: glance-secure-rbac-protection-functional
     parent: devstack-tempest
     timeout: 4200
-    branches:
-      regex: ^stable/wallaby$
-      negate: true
     required-projects:
       - openstack/glance
       - openstack/glance-tempest-plugin
@@ -22,18 +19,6 @@
           $GLANCE_API_CONF:
             DEFAULT:
               default_log_levels: "amqp=WARN, amqplib=WARN, boto=WARN, qpid=WARN, sqlalchemy=WARN, suds=INFO, oslo.messaging=INFO, oslo_messaging=INFO, iso8601=WARN, requests.packages.urllib3.connectionpool=WARN, urllib3.connectionpool=WARN, websocket=WARN, requests.packages.urllib3.util.retry=WARN, urllib3.util.retry=WARN, keystonemiddleware=WARN, routes.middleware=WARN, stevedore=WARN, taskflow=WARN, keystoneauth=WARN, oslo.cache=INFO, dogpile.core.dogpile=INFO, oslo_policy=DEBUG"
-
-- job:
-    name: glance-secure-rbac-protection-functional
-    parent: devstack-tempest
-    timeout: 4200
-    branches:
-      - stable/wallaby
-    required-projects:
-      - openstack/glance
-      - name: openstack/glance-tempest-plugin
-        override-checkout: 0.2.0
-    vars: *rbac-protection-functional-vars
 
 - job:
     name: glance-legacy-rbac-protection-functional
