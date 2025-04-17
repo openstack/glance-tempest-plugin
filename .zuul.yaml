@@ -46,6 +46,12 @@
               default_log_levels: "amqp=WARN, amqplib=WARN, boto=WARN, qpid=WARN, sqlalchemy=WARN, suds=INFO, oslo.messaging=INFO, oslo_messaging=INFO, iso8601=WARN, requests.packages.urllib3.connectionpool=WARN, urllib3.connectionpool=WARN, websocket=WARN, requests.packages.urllib3.util.retry=WARN, urllib3.util.retry=WARN, keystonemiddleware=WARN, routes.middleware=WARN, stevedore=WARN, taskflow=WARN, keystoneauth=WARN, oslo.cache=INFO, dogpile.core.dogpile=INFO, oslo_policy=DEBUG"
 
 - job:
+    name: glance-secure-rbac-protection-functional-2025-1
+    parent: glance-secure-rbac-protection-functional
+    nodeset: openstack-single-node-noble
+    override-checkout: stable/2025.1
+
+- job:
     name: glance-secure-rbac-protection-functional-2024-2
     parent: glance-secure-rbac-protection-functional
     nodeset: openstack-single-node-jammy
@@ -74,6 +80,7 @@
         # NOTE(gmann): We are testing stable jobs in check pipeline only as
         # that should be enough if any tests is changed in backward
         # incompatible way.
+        - glance-secure-rbac-protection-functional-2025-1
         - glance-secure-rbac-protection-functional-2024-2
         - glance-secure-rbac-protection-functional-2024-1
         - glance-secure-rbac-protection-functional-2023-2
