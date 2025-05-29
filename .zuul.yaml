@@ -63,12 +63,6 @@
     nodeset: openstack-single-node-jammy
     override-checkout: stable/2024.1
 
-- job:
-    name: glance-secure-rbac-protection-functional-2023-2
-    parent: glance-secure-rbac-protection-functional
-    nodeset: openstack-single-node-jammy
-    override-checkout: stable/2023.2
-
 - project:
     templates:
       - check-requirements
@@ -83,7 +77,6 @@
         - glance-secure-rbac-protection-functional-2025-1
         - glance-secure-rbac-protection-functional-2024-2
         - glance-secure-rbac-protection-functional-2024-1
-        - glance-secure-rbac-protection-functional-2023-2
     gate:
       jobs:
         - glance-secure-rbac-protection-functional
