@@ -9,6 +9,7 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+
 import abc
 
 from tempest.api.image import base
@@ -286,6 +287,7 @@ class MetadefV2RbacNamespaceTest(RbacMetadefBase):
         cls.project_id = cls.persona.namespaces_client.project_id
         cls.alt_project_id = cls.alt_persona.namespaces_client.project_id
         cls.admin_namespace_client = cls.os_project_admin.namespaces_client
+        cls.namespaces_client = cls.persona.namespaces_client
         cls.namespace_client = cls.persona.namespaces_client
         cls.alt_namespace_client = cls.alt_persona.namespaces_client
 
@@ -301,6 +303,40 @@ class MetadefV2RbacNamespaceTest(RbacMetadefBase):
         else:
             for ns in actual:
                 self.assertIn(ns['namespace'], expected_ns)
+
+    def assertGetNamespace(self, actual_ns, owner, client):
+        expected_status = 200
+        if (actual_ns['visibility'] == 'private' and
+                actual_ns['owner'] != owner):
+            expected_status = exceptions.NotFound
+
+        self.do_request('show_namespace',
+                        expected_status=expected_status,
+                        client=client,
+                        namespace=actual_ns['namespace'])
+
+    def assertUpdateNamespace(self, actual_ns, owner, client):
+        expected_status = exceptions.Forbidden
+        if not (actual_ns['visibility'] == 'public' or
+                actual_ns['owner'] == owner):
+            expected_status = exceptions.NotFound
+
+        self.do_request('update_namespace',
+                        expected_status=expected_status,
+                        client=client,
+                        description=data_utils.arbitrary_string(),
+                        namespace=actual_ns['namespace'])
+
+    def assertDeleteNamespace(self, actual_ns, owner, client):
+        expected_status = exceptions.Forbidden
+        if not (actual_ns['visibility'] == 'public' or
+                actual_ns['owner'] == owner):
+            expected_status = exceptions.NotFound
+
+        self.do_request('delete_namespace',
+                        expected_status=expected_status,
+                        client=client,
+                        namespace=actual_ns['namespace'])
 
 
 class MetadefV2RbacNamespaceTemplate(metaclass=abc.ABCMeta):
@@ -350,24 +386,40 @@ class MetadefV2RbacResourceTypeTest(RbacMetadefBase):
         cls.alt_project_id = cls.alt_persona.namespaces_client.project_id
         cls.resource_types_client = cls.persona.resource_types_client
 
-    def create_resource_types(self):
-        # Create namespace for two different projects
-        namespaces = self.create_namespaces()
-
+    def create_resource_types(self, namespace=None, owner=None, client=None,
+                              is_admin=True):
         namespace_resource_types = []
-        for ns in namespaces:
-            alt_client = None
-            if ns['namespace'].startswith(self.alt_project_id):
-                alt_client = self.os_project_alt_admin.resource_types_client
-                client = alt_client
-            if alt_client is None:
-                client = self.os_project_admin.resource_types_client
-            resource_name = "rs_type_of_%s" % (ns['namespace'])
-            resource_type = client.create_resource_type_association(
-                ns['namespace'], name=resource_name)
-            resource_types = {'namespace': ns,
-                              'resource_type': resource_type}
-            namespace_resource_types.append(resource_types)
+        if is_admin:
+            # Create namespace for two different projects
+            namespaces = self.create_namespaces()
+
+            for ns in namespaces:
+                alt_client = None
+                if ns['namespace'].startswith(self.alt_project_id):
+                    alt_client = \
+                        self.os_project_alt_admin.resource_types_client
+                    client = alt_client
+                if alt_client is None:
+                    client = self.os_project_admin.resource_types_client
+
+                resource_name = "rs_type_of_%s" % (ns['namespace'])
+                resource_type = client.create_resource_type_association(
+                    ns['namespace'], name=resource_name)
+                resource_types = {'namespace': ns,
+                                  'resource_type': resource_type}
+                namespace_resource_types.append(resource_types)
+        else:
+            rs_type_name = "rs_type_of_%s" % (namespace['namespace'])
+            expected_status = exceptions.Forbidden
+            if not (namespace['visibility'] == 'public' or
+                    namespace['owner'] == owner):
+                expected_status = exceptions.NotFound
+
+            self.do_request('create_resource_type_association',
+                            expected_status=expected_status,
+                            namespace_id=namespace['namespace'],
+                            name=rs_type_name,
+                            client=client)
 
         return namespace_resource_types
 
@@ -377,6 +429,30 @@ class MetadefV2RbacResourceTypeTest(RbacMetadefBase):
         for rs_type in ns_rs_types:
             self.assertIn(rs_type['resource_type']['name'],
                           actual_rs_types)
+
+    def assertRSTypeGet(self, actual_rs_type, client, owner):
+        ns = actual_rs_type['namespace']
+        expected_status = 200
+        if (ns['visibility'] != 'public' and ns['owner'] != owner):
+            expected_status = exceptions.NotFound
+
+        self.do_request('list_resource_type_association',
+                        expected_status=expected_status,
+                        namespace_id=ns['namespace'],
+                        client=client)
+
+    def assertRSTypeDelete(self, actual_rs_type, client, owner):
+        ns = actual_rs_type['namespace']
+        expected_status = exceptions.Forbidden
+        if (ns['visibility'] != 'public' and ns['owner'] != owner):
+            expected_status = exceptions.NotFound
+
+        self.do_request(
+            'delete_resource_type_association',
+            expected_status=expected_status,
+            namespace_id=ns['namespace'],
+            resource_name=actual_rs_type['resource_type']['name'],
+            client=client)
 
 
 class MetadefV2RbacResourceTypeTemplate(metaclass=abc.ABCMeta):
@@ -422,23 +498,37 @@ class MetadefV2RbacObjectsTest(RbacMetadefBase):
             cls.alt_persona.namespace_objects_client.project_id
         cls.objects_client = cls.persona.namespace_objects_client
 
-    def create_objects(self):
-        # Create namespace for two different projects
-        namespaces = self.create_namespaces()
-
-        client = self.os_project_admin.namespace_objects_client
+    def create_objects(self, namespace=None, owner=None, client=None,
+                       is_admin=True):
         namespace_objects = []
-        for ns in namespaces:
-            if ns['namespace'].startswith(self.project_id):
-                client = self.os_project_alt_admin.namespace_objects_client
-            object_name = "object_of_%s" % (ns['namespace'])
-            namespace_object = client.create_namespace_object(
-                ns['namespace'], name=object_name,
-                description=data_utils.arbitrary_string())
-
-            obj = {'namespace': ns, 'object': namespace_object}
-            namespace_objects.append(obj)
-
+        if is_admin:
+            # Create namespace for two different projects
+            namespaces = self.create_namespaces()
+            for ns in namespaces:
+                alt_client = None
+                if ns['namespace'].startswith(self.alt_project_id):
+                    alt_client = \
+                        self.os_project_alt_admin.namespace_objects_client
+                    client = alt_client
+                if alt_client is None:
+                    client = self.os_project_admin.namespace_objects_client
+                object_name = "object_of_%s" % (ns['namespace'])
+                namespace_object = client.create_namespace_object(
+                    ns['namespace'], name=object_name,
+                    description=data_utils.arbitrary_string())
+                obj = {'namespace': ns, 'object': namespace_object}
+                namespace_objects.append(obj)
+        else:
+            object_name = "object_of_%s" % (namespace['namespace'])
+            expected_status = exceptions.Forbidden
+            if (namespace['visibility'] == 'private' and
+                    namespace['owner'] != owner):
+                expected_status = exceptions.NotFound
+            self.do_request('create_namespace_object',
+                            expected_status=expected_status,
+                            namespace=namespace['namespace'],
+                            name=object_name,
+                            client=client)
         return namespace_objects
 
     def assertObjectsList(self, actual_obj, client, owner=None):
@@ -464,6 +554,47 @@ class MetadefV2RbacObjectsTest(RbacMetadefBase):
                                    client=client)
             self.assertIn(actual_obj['object']['name'],
                           resp['objects'][0]['name'])
+
+    def assertObjectGet(self, actual_obj, owner, client):
+        ns = actual_obj['namespace']
+        expected_status = 200
+        if (ns['visibility'] == 'private' and
+                ns['owner'] != owner):
+            expected_status = exceptions.NotFound
+
+        self.do_request('show_namespace_object',
+                        expected_status=expected_status,
+                        namespace=actual_obj['namespace']['namespace'],
+                        object_name=actual_obj['object']['name'],
+                        client=client)
+
+    def assertObjectUpdate(self, actual_object, owner, client):
+        ns = actual_object['namespace']
+        expected_status = exceptions.Forbidden
+        if (ns['visibility'] == 'private' and
+                ns['owner'] != owner):
+            expected_status = exceptions.NotFound
+
+        self.do_request('update_namespace_object',
+                        expected_status=expected_status,
+                        name=actual_object['object']['name'],
+                        description=data_utils.arbitrary_string(),
+                        namespace=actual_object['namespace']['namespace'],
+                        object_name=actual_object['object']['name'],
+                        client=client)
+
+    def assertObjectDelete(self, actual_obj, owner, client):
+        ns = actual_obj['namespace']
+        expected_status = exceptions.Forbidden
+        if (ns['visibility'] == 'private' and
+                ns['owner'] != owner):
+            expected_status = exceptions.NotFound
+
+        self.do_request('delete_namespace_object',
+                        expected_status=expected_status,
+                        namespace=actual_obj['namespace']['namespace'],
+                        object_name=actual_obj['object']['name'],
+                        client=client)
 
 
 class MetadefV2RbacObjectsTemplate(metaclass=abc.ABCMeta):
@@ -513,28 +644,39 @@ class MetadefV2RbacPropertiesTest(RbacMetadefBase):
         cls.alt_project_id = cls.alt_persona.namespaces_client.project_id
         cls.properties_client = cls.persona.namespace_properties_client
 
-    def create_properties(self):
-        # Create namespace for two different projects
-        namespaces = self.create_namespaces()
-
+    def create_properties(self, namespace=None, owner=None, client=None,
+                          is_admin=True):
         namespace_properties = []
-        for ns in namespaces:
-            alt_client = None
-            if ns['namespace'].startswith(self.alt_project_id):
-                alt_client = \
-                    self.os_project_alt_admin.namespace_properties_client
-                client = alt_client
-            if alt_client is None:
-                client = self.os_project_admin.namespace_properties_client
-
-            property_name = "prop_of_%s" % (ns['namespace'])
-            namespace_property = client.create_namespace_property(
-                ns['namespace'], name=property_name, title='property',
-                type='integer')
-
-            prop = {'namespace': ns, 'property': namespace_property}
-            namespace_properties.append(prop)
-
+        if is_admin:
+            # Create namespace for two different projects
+            namespaces = self.create_namespaces()
+            for ns in namespaces:
+                alt_client = None
+                if ns['namespace'].startswith(self.alt_project_id):
+                    alt_client = \
+                        self.os_project_alt_admin.namespace_properties_client
+                    client = alt_client
+                if alt_client is None:
+                    client = self.os_project_admin.namespace_properties_client
+                property_name = "prop_of_%s" % (ns['namespace'])
+                namespace_property = client.create_namespace_property(
+                    ns['namespace'], name=property_name, title='property',
+                    type='integer')
+                prop = {'namespace': ns, 'property': namespace_property}
+                namespace_properties.append(prop)
+        else:
+            property_name = "prop_of_%s" % (namespace['namespace'])
+            expected_status = exceptions.Forbidden
+            if not (namespace['visibility'] == 'public' or
+                    namespace['owner'] == owner):
+                expected_status = exceptions.NotFound
+            self.do_request('create_namespace_property',
+                            expected_status=expected_status,
+                            namespace=namespace['namespace'],
+                            title="property",
+                            type='integer',
+                            name=property_name,
+                            client=client)
         return namespace_properties
 
     def assertPropertyList(self, actual_prop, client, owner=None):
@@ -559,6 +701,43 @@ class MetadefV2RbacPropertiesTest(RbacMetadefBase):
                                    namespace=ns['namespace'])
             self.assertEqual(actual_prop['property']['name'],
                              [*resp['properties']][0])
+
+    def assertPropertyGet(self, actual_prop, client, owner=None):
+        ns = actual_prop['namespace']
+        expected_status = 200
+        if (ns['visibility'] != 'public' and ns['owner'] != owner):
+            expected_status = exceptions.NotFound
+        self.do_request('show_namespace_properties',
+                        expected_status=expected_status,
+                        namespace=ns['namespace'],
+                        property_name=actual_prop['property']['name'],
+                        client=client)
+
+    def assertPropertyUpdate(self, actual_prop, client, owner=None):
+        ns = actual_prop['namespace']
+        expected_status = exceptions.Forbidden
+        if (ns['visibility'] != 'public' and ns['owner'] != owner):
+            expected_status = exceptions.NotFound
+        self.do_request('update_namespace_properties',
+                        expected_status=expected_status,
+                        name=actual_prop['property']['name'],
+                        description=data_utils.arbitrary_string(),
+                        namespace=ns['namespace'],
+                        property_name=actual_prop['property']['name'],
+                        title="UPDATE_Property",
+                        type="string",
+                        client=client)
+
+    def assertPropertyDelete(self, actual_prop, client, owner=None):
+        ns = actual_prop['namespace']
+        expected_status = exceptions.Forbidden
+        if (ns['visibility'] != 'public' and ns['owner'] != owner):
+            expected_status = exceptions.NotFound
+        self.do_request('delete_namespace_property',
+                        expected_status=expected_status,
+                        namespace=ns['namespace'],
+                        property_name=actual_prop['property']['name'],
+                        client=client)
 
 
 class MetadefV2RbacPropertiesTemplate(metaclass=abc.ABCMeta):
@@ -608,47 +787,71 @@ class MetadefV2RbacTagsTest(RbacMetadefBase):
         cls.alt_project_id = cls.alt_persona.namespaces_client.project_id
         cls.tags_client = cls.persona.namespace_tags_client
 
-    def create_tags(self, namespaces, multiple_tags=False):
+    def create_tags(self, namespace=None, client=None, owner=None,
+                    multiple_tags=False, is_admin=True):
         namespace_tags = []
+        if is_admin:
+            # Create namespace for two different projects
+            if not multiple_tags:
+                for ns in namespace:
+                    alt_client = None
+                    if ns['namespace'].startswith(self.alt_project_id):
+                        alt_client = \
+                            self.os_project_alt_admin.namespace_tags_client
+                        client = alt_client
+                    if alt_client is None:
+                        client = self.os_project_admin.namespace_tags_client
+                    tag_name = "tag_of_%s" % (ns['namespace'])
+                    namespace_tag = client.create_namespace_tag(
+                        ns['namespace'], tag_name=tag_name)
 
-        if multiple_tags:
-            tags = [{"name": "tag1"}, {"name": "tag2"}, {"name": "tag3"}]
-            for ns in namespaces:
-                alt_client = None
-                if ns['namespace'].startswith(self.alt_project_id):
-                    alt_client = \
-                        self.os_project_alt_admin.namespace_tags_client
-                    client = alt_client
-                if alt_client is None:
-                    client = self.os_project_admin.namespace_tags_client
-                multiple_tags = client.create_namespace_tags(
+                    tag = {'namespace': ns, 'tag': namespace_tag}
+                    namespace_tags.append(tag)
+            else:
+                tags = [{"name": "tag1"}, {"name": "tag2"}, {"name": "tag3"}]
+                for ns in namespace:
+                    alt_client = None
+                    if ns['namespace'].startswith(self.alt_project_id):
+                        alt_client = \
+                            self.os_project_alt_admin.namespace_tags_client
+                        client = alt_client
+                    if alt_client is None:
+                        client = self.os_project_admin.namespace_tags_client
+                namespace_multiple_tags = client.create_namespace_tags(
                     ns['namespace'], tags=tags)
 
-                namespace_multiple_tags = {'namespace': ns,
-                                           'tags': multiple_tags}
-                namespace_tags.append(namespace_multiple_tags)
-        else:
-            for ns in namespaces:
-                alt_client = None
-                if ns['namespace'].startswith(self.alt_project_id):
-                    alt_client = \
-                        self.os_project_alt_admin.namespace_tags_client
-                    client = alt_client
-                if alt_client is None:
-                    client = self.os_project_admin.namespace_tags_client
-                tag_name = "tag_of_%s" % (ns['namespace'])
-                namespace_tag = client.create_namespace_tag(
-                    ns['namespace'], tag_name=tag_name)
+                multiple_tags = {'namespace': ns,
+                                 'tags': namespace_multiple_tags}
+                namespace_tags.append(multiple_tags)
 
-                tag = {'namespace': ns, 'tag': namespace_tag}
-                namespace_tags.append(tag)
+        else:
+            expected_status = exceptions.Forbidden
+            if (namespace['visibility'] != 'public' and
+                    namespace['owner'] != owner):
+                expected_status = exceptions.NotFound
+
+            if multiple_tags:
+                multiple_tags = [{"name": "tag1"}, {"name": "tag2"},
+                                 {"name": "tag3"}]
+                self.do_request('create_namespace_tags',
+                                expected_status=expected_status,
+                                namespace=namespace['namespace'],
+                                tags=multiple_tags,
+                                client=client)
+            else:
+                tag_name = "tag_of_%s" % (namespace['namespace'])
+                self.do_request('create_namespace_tag',
+                                expected_status=expected_status,
+                                namespace=namespace['namespace'],
+                                tag_name=tag_name,
+                                client=client)
 
         return namespace_tags
 
     def assertTagsList(self, actual_tag, client, owner=None):
         ns = actual_tag['namespace']
         if owner:
-            if not (ns['visibility'] == 'public' or ns['owner'] == owner):
+            if (ns['visibility'] != 'public' and ns['owner'] != owner):
                 self.do_request('list_namespace_tags',
                                 expected_status=exceptions.NotFound,
                                 client=client,
@@ -667,6 +870,77 @@ class MetadefV2RbacTagsTest(RbacMetadefBase):
                                    namespace=ns['namespace'])
             self.assertEqual(actual_tag['tag']['name'],
                              resp['tags'][0]['name'])
+
+    def assertTagGet(self, actual_tag, client, owner=None):
+        ns = actual_tag['namespace']
+        expected_status = 200
+        if (ns['visibility'] != 'public' and ns['owner'] != owner):
+            expected_status = exceptions.NotFound
+
+        self.do_request('show_namespace_tag',
+                        expected_status=expected_status,
+                        namespace=ns['namespace'],
+                        tag_name=actual_tag['tag']['name'],
+                        client=client)
+
+    def assertTagUpdate(self, tag, client, owner):
+        ns = tag['namespace']
+        expected_status = exceptions.Forbidden
+        if (ns['visibility'] != 'public' and ns['owner'] != owner):
+            expected_status = exceptions.NotFound
+
+        self.do_request('update_namespace_tag',
+                        expected_status=expected_status,
+                        name=data_utils.arbitrary_string(),
+                        namespace=tag['namespace']['namespace'],
+                        tag_name=tag['tag']['name'],
+                        client=client)
+
+    def assertDeleteTags(self, tag, client, owner=None, multiple_tags=False,
+                         is_admin=True):
+        if is_admin:
+            namespace = tag['namespace']['namespace']
+            if multiple_tags:
+                self.do_request('delete_namespace_tags',
+                                expected_status=204,
+                                namespace=namespace,
+                                client=client)
+                # Verify the tags are deleted successfully
+                resp = self.do_request('list_namespace_tags',
+                                       client=client,
+                                       namespace=namespace)
+                self.assertEqual(0, len(resp['tags']))
+            else:
+                tag_name = tag['tag']['name']
+                self.do_request('delete_namespace_tag',
+                                expected_status=204,
+                                namespace=namespace,
+                                tag_name=tag_name,
+                                client=client)
+
+                # Verify the tag is deleted successfully
+                self.do_request('show_namespace_tag',
+                                expected_status=exceptions.NotFound,
+                                client=client,
+                                namespace=namespace,
+                                tag_name=tag_name)
+        else:
+            ns = tag['namespace']
+            expected_status = exceptions.Forbidden
+            if (ns['visibility'] != 'public' and ns['owner'] != owner):
+                expected_status = exceptions.NotFound
+
+            if multiple_tags:
+                self.do_request('delete_namespace_tags',
+                                expected_status=expected_status,
+                                namespace=ns['namespace'],
+                                client=client)
+            else:
+                self.do_request('delete_namespace_tag',
+                                expected_status=expected_status,
+                                namespace=ns['namespace'],
+                                tag_name=tag['tag']['name'],
+                                client=client)
 
 
 class MetadefV2RbacTagsTemplate(metaclass=abc.ABCMeta):
